@@ -1,0 +1,55 @@
+.square {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.square.light {
+  background-color: var(--square-light);
+}
+
+.square.dark {
+  background-color: var(--square-dark);
+}
+
+.square.selected {
+  background-color: var(--selected) !important;
+  box-shadow: inset 0 0 0 3px rgba(0, 255, 0, 0.6);
+}
+
+.square.valid-move {
+  cursor: pointer;
+}
+
+.square.in-check {
+  background-color: var(--check) !important;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.move-indicator {
+  width: 25%;
+  height: 25%;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+}
+
+.capture-indicator {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(255, 0, 0, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+}
