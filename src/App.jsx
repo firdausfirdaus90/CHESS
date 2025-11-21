@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import ChessBoard from './components/ChessBoard';
 import { initializeBoard, COLORS, toAlgebraic, PIECES } from './utils/chessLogic';
+import { saveGameResult } from './services/gameHistory';
+import { useAuth } from './contexts/AuthContext';
 import './App.css';
 
 const App = () => {
   const [board, setBoard] = useState(initializeBoard());
   const [currentPlayer, setCurrentPlayer] = useState(COLORS.WHITE);
   const [gameMode, setGameMode] = useState('local'); // 'local' or 'ai'
+  const [aiType, setAiType] = useState('minimax'); // 'minimax' or 'claude'
   const [aiDifficulty, setAiDifficulty] = useState('medium');
   const [moveHistory, setMoveHistory] = useState([]);
   const [gameStatus, setGameStatus] = useState('active');
@@ -16,6 +20,9 @@ const App = () => {
   const [blackTime, setBlackTime] = useState(600);
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const gameStartTime = useRef(Date.now());
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   // Theme effect
   useEffect(() => {
@@ -62,11 +69,28 @@ const App = () => {
     }
   }, []);
 
-  const handleGameOver = useCallback((reason, winnerColor) => {
+  const handleGameOver = useCallback(async (reason, winnerColor) => {
     setGameStatus(reason);
     setWinner(winnerColor);
     setTimerEnabled(false);
-  }, []);
+
+    // Save game result to Firestore
+    try {
+      const duration = Math.floor((Date.now() - gameStartTime.current) / 1000); // in seconds
+      const gameData = {
+        winner: reason === 'stalemate' ? 'draw' : winnerColor,
+        gameMode: gameMode,
+        aiType: gameMode === 'ai' ? aiType : null,
+        aiDifficulty: gameMode === 'ai' ? aiDifficulty : null,
+        moveCount: moveHistory.length,
+        duration: duration
+      };
+      await saveGameResult(gameData);
+      console.log('Game result saved successfully');
+    } catch (error) {
+      console.error('Failed to save game result:', error);
+    }
+  }, [gameMode, aiType, aiDifficulty, moveHistory]);
 
   const handleNewGame = () => {
     setBoard(initializeBoard());
@@ -76,6 +100,16 @@ const App = () => {
     setWinner(null);
     setWhiteTime(600);
     setBlackTime(600);
+    gameStartTime.current = Date.now();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    }
   };
 
   const handleUndo = () => {
@@ -173,9 +207,15 @@ const App = () => {
     <div className="app">
       <header className="app-header">
         <h1>♟️ Chess Game</h1>
-        <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button>
+        <div className="header-actions">
+          <Link to="/history" className="history-link">View History</Link>
+          <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          <button className="logout-button" onClick={handleLogout} title="Logout">
+            Logout
+          </button>
+        </div>
       </header>
 
       <div className="game-container">
@@ -192,14 +232,23 @@ const App = () => {
             </div>
 
             {gameMode === 'ai' && (
-              <div className="control-group">
-                <label>AI Difficulty:</label>
-                <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)}>
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </div>
+              <>
+                <div className="control-group">
+                  <label>AI Type:</label>
+                  <select value={aiType} onChange={(e) => setAiType(e.target.value)}>
+                    <option value="minimax">Minimax (Free)</option>
+                    <option value="claude">Claude AI (Smart)</option>
+                  </select>
+                </div>
+                <div className="control-group">
+                  <label>AI Difficulty:</label>
+                  <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)}>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div className="control-group">
@@ -278,6 +327,7 @@ const App = () => {
             onMove={() => {}}
             onGameOver={handleGameOver}
             gameMode={gameMode}
+            aiType={aiType}
             aiDifficulty={aiDifficulty}
             currentPlayer={currentPlayer}
             setCurrentPlayer={setCurrentPlayer}

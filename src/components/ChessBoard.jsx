@@ -8,15 +8,18 @@ import {
   isCheckmate,
   isStalemate,
   findKing,
-  COLORS
+  COLORS,
+  toAlgebraic
 } from '../utils/chessLogic';
 import { getBestMove } from '../ai/chessAI';
+import { getClaudeMove } from '../services/claudeAI';
 import './ChessBoard.css';
 
 const ChessBoard = ({
   onMove,
   onGameOver,
   gameMode,
+  aiType,
   aiDifficulty,
   currentPlayer,
   setCurrentPlayer,
@@ -28,6 +31,7 @@ const ChessBoard = ({
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [validMoves, setValidMoves] = useState([]);
   const [kingInCheck, setKingInCheck] = useState(null);
+  const [aiThinking, setAiThinking] = useState(false);
 
   useEffect(() => {
     // Check for check, checkmate, or stalemate
@@ -50,17 +54,44 @@ const ChessBoard = ({
 
   useEffect(() => {
     // AI move
-    if (gameMode === 'ai' && currentPlayer === COLORS.BLACK) {
-      const timer = setTimeout(() => {
-        const aiMove = getBestMove(board, COLORS.BLACK, aiDifficulty);
-        if (aiMove) {
-          handleMove(aiMove.from.row, aiMove.from.col, aiMove.to.row, aiMove.to.col);
-        }
-      }, 500);
+    if (gameMode === 'ai' && currentPlayer === COLORS.BLACK && !aiThinking) {
+      setAiThinking(true);
 
-      return () => clearTimeout(timer);
+      const makeAIMove = async () => {
+        try {
+          let aiMove;
+
+          if (aiType === 'claude') {
+            // Use Claude AI
+            const moveHistoryStr = moveHistory.map((m, idx) =>
+              `${Math.floor(idx / 2) + 1}. ${toAlgebraic(m.from.row, m.from.col)}-${toAlgebraic(m.to.row, m.to.col)}`
+            );
+            aiMove = await getClaudeMove(board, COLORS.BLACK, moveHistoryStr);
+          } else {
+            // Use Minimax AI
+            await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
+            aiMove = getBestMove(board, COLORS.BLACK, aiDifficulty);
+          }
+
+          if (aiMove) {
+            handleMove(aiMove.from.row, aiMove.from.col, aiMove.to.row, aiMove.to.col);
+          }
+        } catch (error) {
+          console.error('AI move error:', error);
+          alert('AI failed to make a move. Using Minimax fallback.');
+          // Fallback to minimax if Claude fails
+          const fallbackMove = getBestMove(board, COLORS.BLACK, aiDifficulty);
+          if (fallbackMove) {
+            handleMove(fallbackMove.from.row, fallbackMove.from.col, fallbackMove.to.row, fallbackMove.to.col);
+          }
+        } finally {
+          setAiThinking(false);
+        }
+      };
+
+      makeAIMove();
     }
-  }, [currentPlayer, gameMode, board, aiDifficulty]);
+  }, [currentPlayer, gameMode, board, aiType, aiDifficulty, aiThinking]);
 
   const handleSquareClick = (row, col) => {
     if (gameMode === 'ai' && currentPlayer === COLORS.BLACK) {
