@@ -2,15 +2,14 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// TODO: Replace with your Firebase config from Firebase Console
-// Get this from: Firebase Console > Project Settings > Your Apps > Web App
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCnkTsk5EVAN-lAAoLhxMeENBwnIZXFGu4",
+  authDomain: "chess-game-e70b8.firebaseapp.com",
+  projectId: "chess-game-e70b8",
+  storageBucket: "chess-game-e70b8.firebasestorage.app",
+  messagingSenderId: "821282724984",
+  appId: "1:821282724984:web:e69858aca4bbcc83bde18d"
 };
 
 // Initialize Firebase
